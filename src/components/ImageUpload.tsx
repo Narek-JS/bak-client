@@ -52,7 +52,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
         formData.append(`images`, file);
       });
 
-      const response = await fetch("http://localhost:5000/api/images", {
+      const response = await fetch(import.meta.env.VITE_API_IMAGES_URL, {
         method: "POST",
         body: formData,
       });

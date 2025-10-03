@@ -89,7 +89,7 @@ const VideoProcessor: React.FC = () => {
   // Initialize WebSocket connection
   const initializeWebSocket = () => {
     try {
-      const ws = new WebSocket("ws://localhost:5000/ws");
+      const ws = new WebSocket(import.meta.env.VITE_WEBSOCKET_URL);
       webSocketRef.current = ws;
 
       ws.onopen = () => {
@@ -387,11 +387,9 @@ const VideoProcessor: React.FC = () => {
       {/* Instructions */}
       <div className="mt-6 text-center text-gray-500 text-sm">
         <p>Allow camera access to start real-time processing</p>
-        <p>Make sure the backend server is running on localhost:5000</p>
       </div>
     </div>
   );
 };
 
 export default VideoProcessor;
-
