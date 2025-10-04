@@ -17,12 +17,41 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaSourceRef = useRef<MediaSource | null>(null);
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
+  const heartbeatIntervalRef = useRef<number | null>(null);
 
   const WEBSOCKET_URL =
     import.meta.env.VITE_WEBSOCKET_URL ||
     (window.location.protocol === "https:"
       ? "wss://bak-camera.fly.dev/ws"
       : "ws://localhost:5000/ws");
+
+  const startHeartbeat = useCallback(() => {
+    // Clear existing heartbeat
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+
+    // Send heartbeat every 30 seconds
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (websocketRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          websocketRef.current.send(
+            JSON.stringify({ type: "heartbeat", timestamp: Date.now() })
+          );
+          console.log("💓 Sent heartbeat to server");
+        } catch (error) {
+          console.error("❌ Error sending heartbeat:", error);
+        }
+      }
+    }, 30000);
+  }, []);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
 
   const initializeMediaSource = useCallback(() => {
     if (!remoteVideoRef.current) return;
@@ -95,6 +124,9 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
         console.log("✅ WebSocket connected successfully");
         setConnectionStatus("Connected");
         setError(null);
+
+        // Start heartbeat to keep connection alive
+        startHeartbeat();
       };
 
       ws.onmessage = (event) => {
@@ -137,8 +169,8 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
           try {
             const message = JSON.parse(event.data);
             console.log("📨 WebSocket message:", message);
-          } catch (err) {
-            console.log("📨 WebSocket text message:", event.data);
+          } catch (error) {
+            console.log("📨 WebSocket text message (not JSON):", event.data);
           }
         }
       };
@@ -151,11 +183,13 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
           event.reason
         );
         setConnectionStatus("Disconnected");
-        setIsStreaming(false);
 
-        // Attempt to reconnect after a delay
+        // Stop heartbeat
+        stopHeartbeat();
+
+        // Attempt to reconnect after a delay for abnormal closures
         if (event.code !== 1000) {
-          // Not a normal closure
+          // Not a normal closure (1000 = normal closure)
           console.log("🔄 Attempting to reconnect WebSocket in 3 seconds...");
           setTimeout(() => {
             if (isStreaming) {
@@ -163,6 +197,9 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
               initializeWebSocket();
             }
           }, 3000);
+        } else {
+          // Normal closure - stop streaming
+          setIsStreaming(false);
         }
       };
 
@@ -171,11 +208,11 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
         setError("WebSocket connection failed");
         setConnectionStatus("Error");
       };
-    } catch (err) {
-      console.error("❌ Error creating WebSocket:", err);
+    } catch (error) {
+      console.error("❌ Error creating WebSocket:", error);
       setError("Failed to create WebSocket connection");
     }
-  }, [WEBSOCKET_URL, isStreaming]);
+  }, [WEBSOCKET_URL, isStreaming, startHeartbeat, stopHeartbeat]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -288,11 +325,24 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
               .arrayBuffer()
               .then((arrayBuffer) => {
                 if (arrayBuffer.byteLength > 0) {
-                  websocketRef.current!.send(arrayBuffer);
-                  console.log(
-                    "✅ Sent video chunk to server, size:",
-                    arrayBuffer.byteLength
-                  );
+                  try {
+                    websocketRef.current!.send(arrayBuffer);
+                    console.log(
+                      "✅ Sent video chunk to server, size:",
+                      arrayBuffer.byteLength
+                    );
+                  } catch (error) {
+                    console.error("❌ Error sending video chunk:", error);
+                    // If send fails, try to reconnect
+                    if (isStreaming) {
+                      console.log(
+                        "🔄 Attempting to reconnect due to send error..."
+                      );
+                      setTimeout(() => {
+                        initializeWebSocket();
+                      }, 1000);
+                    }
+                  }
                 } else {
                   console.warn("❌ Empty arrayBuffer after conversion");
                 }
@@ -305,6 +355,16 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
               "WebSocket not ready, state:",
               websocketRef.current?.readyState
             );
+            // If WebSocket is not open and we're streaming, try to reconnect
+            if (
+              isStreaming &&
+              websocketRef.current?.readyState === WebSocket.CLOSED
+            ) {
+              console.log("🔄 WebSocket is closed, attempting to reconnect...");
+              setTimeout(() => {
+                initializeWebSocket();
+              }, 2000);
+            }
           }
         } else {
           console.warn("❌ Received empty video chunk from MediaRecorder");
@@ -360,7 +420,7 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
       console.error("Error starting camera:", err);
       setError("Failed to access camera. Please check permissions.");
     }
-  }, [initializeMediaSource, initializeWebSocket]);
+  }, [initializeMediaSource, initializeWebSocket, isStreaming]);
 
   const stopStreaming = useCallback(() => {
     try {
@@ -423,9 +483,10 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopHeartbeat();
       stopStreaming();
     };
-  }, [stopStreaming]);
+  }, [stopHeartbeat, stopStreaming]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
