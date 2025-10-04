@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebSocket Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .log {
+        background: #f0f0f0;
+        padding: 10px;
+        margin: 10px 0;
+        height: 300px;
+        overflow-y: auto;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket Connection Test</h1>
+
+    <div>
+      <button id="connectBtn">Connect to WebSocket</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+      <button id="sendTestBtn" disabled>Send Test Data</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const sendTestBtn = document.getElementById("sendTestBtn");
+      const log = document.getElementById("log");
+
+      let ws = null;
+
+      function addLog(message) {
+        const time = new Date().toLocaleTimeString();
+        log.innerHTML += `<div>[${time}] ${message}</div>`;
+        log.scrollTop = log.scrollHeight;
+        console.log(message);
+      }
+
+      connectBtn.onclick = () => {
+        const url = "ws://localhost:5000/ws";
+        addLog(`Connecting to: ${url}`);
+
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+          addLog("✅ WebSocket connected successfully");
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+          sendTestBtn.disabled = false;
+        };
+
+        ws.onmessage = (event) => {
+          addLog(`📥 Received: ${event.data.length} bytes`);
+          if (event.data instanceof ArrayBuffer) {
+            addLog("   Binary data received");
+          } else {
+            addLog("   Text data: " + event.data);
+          }
+        };
+
+        ws.onerror = (error) => {
+          addLog("❌ WebSocket error: " + error);
+        };
+
+        ws.onclose = (event) => {
+          addLog(
+            `🔌 WebSocket closed - Code: ${event.code}, Reason: ${event.reason}`
+          );
+          connectBtn.disabled = false;
+          disconnectBtn.disabled = true;
+          sendTestBtn.disabled = true;
+        };
+      };
+
+      disconnectBtn.onclick = () => {
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+      };
+
+      sendTestBtn.onclick = () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          // Send text message
+          ws.send(
+            JSON.stringify({ type: "test", message: "Hello from browser" })
+          );
+          addLog("📤 Sent text message");
+
+          // Send binary data
+          const testData = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+          ws.send(testData);
+          addLog("📤 Sent binary data: " + testData.length + " bytes");
+        } else {
+          addLog("❌ WebSocket not connected");
+        }
+      };
+    </script>
+  </body>
+</html>

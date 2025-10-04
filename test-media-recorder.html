@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MediaRecorder Test</title>
+  </head>
+  <body>
+    <h1>MediaRecorder Test</h1>
+    <video
+      id="localVideo"
+      autoplay
+      muted
+      style="width: 400px; height: 300px; border: 1px solid black"
+    ></video>
+    <br /><br />
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <br /><br />
+    <div id="log"></div>
+
+    <script>
+      const localVideo = document.getElementById("localVideo");
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const log = document.getElementById("log");
+
+      let mediaRecorder;
+      let stream;
+
+      function addLog(message) {
+        log.innerHTML +=
+          "<div>" + new Date().toLocaleTimeString() + ": " + message + "</div>";
+        console.log(message);
+      }
+
+      startBtn.onclick = async () => {
+        try {
+          addLog("Requesting camera access...");
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, frameRate: 30 },
+            audio: false,
+          });
+
+          localVideo.srcObject = stream;
+          addLog("Camera access granted");
+
+          // Check MediaRecorder support
+          const mimeType = "video/webm;codecs=vp8";
+          if (MediaRecorder.isTypeSupported(mimeType)) {
+            addLog("MediaRecorder supports: " + mimeType);
+          } else {
+            addLog("MediaRecorder does NOT support: " + mimeType);
+            const fallback = "video/webm";
+            if (MediaRecorder.isTypeSupported(fallback)) {
+              addLog("Using fallback: " + fallback);
+            }
+          }
+
+          // Create MediaRecorder
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: MediaRecorder.isTypeSupported(mimeType)
+              ? mimeType
+              : "video/webm",
+            videoBitsPerSecond: 2500000,
+          });
+
+          mediaRecorder.ondataavailable = (event) => {
+            addLog("Data available: " + event.data.size + " bytes");
+            if (event.data.size > 0) {
+              addLog("✅ Non-empty chunk received!");
+            } else {
+              addLog("❌ Empty chunk received!");
+            }
+          };
+
+          mediaRecorder.onstart = () => {
+            addLog("MediaRecorder started");
+          };
+
+          mediaRecorder.onstop = () => {
+            addLog("MediaRecorder stopped");
+          };
+
+          mediaRecorder.onerror = (error) => {
+            addLog("MediaRecorder error: " + error);
+          };
+
+          // Start recording
+          mediaRecorder.start(200);
+          addLog("Started recording with 200ms chunks");
+
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } catch (error) {
+          addLog("Error: " + error.message);
+        }
+      };
+
+      stopBtn.onclick = () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        addLog("Stopped recording");
+      };
+    </script>
+  </body>
+</html>

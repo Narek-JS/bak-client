@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import LandingPage from './components/LandingPage';
-import ImageUpload from './components/ImageUpload';
-import VideoProcessor from './components/VideoProcessor';
+import React, { useState } from "react";
+import LandingPage from "./components/LandingPage";
+import ImageUpload from "./components/ImageUpload";
+import VideoProcessor from "./components/VideoProcessor";
 
-type AppStep = 'landing' | 'upload' | 'record';
+type AppStep = "landing" | "upload" | "video";
 
 const App: React.FC = () => {
-  const [step, setStep] = useState<AppStep>('landing');
+  const [step, setStep] = useState<AppStep>("landing");
 
   const handleStepChange = (newStep: AppStep) => {
     setStep(newStep);
@@ -14,14 +14,16 @@ const App: React.FC = () => {
 
   const renderCurrentStep = () => {
     switch (step) {
-      case 'landing':
-        return <LandingPage onStart={() => handleStepChange('upload')} />;
-      case 'upload':
-        return <ImageUpload onUploadSuccess={() => handleStepChange('record')} />;
-      case 'record':
-        return <VideoProcessor />;
+      case "landing":
+        return <LandingPage onStart={() => handleStepChange("upload")} />;
+      case "upload":
+        return (
+          <ImageUpload onUploadSuccess={() => handleStepChange("video")} />
+        );
+      case "video":
+        return <VideoProcessor onStop={() => handleStepChange("landing")} />;
       default:
-        return <LandingPage onStart={() => handleStepChange('upload')} />;
+        return <LandingPage onStart={() => handleStepChange("upload")} />;
     }
   };
 

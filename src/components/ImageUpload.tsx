@@ -52,10 +52,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
         formData.append(`images`, file);
       });
 
-      const response = await fetch(import.meta.env.VITE_API_IMAGES_URL, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        import.meta.env.VITE_API_IMAGES_URL ||
+          "http://localhost:5000/api/images",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       if (response.ok) {
         setUploadState((prev) => ({
@@ -110,7 +114,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
             Upload Images
           </h1>
           <p className="text-gray-400 text-lg">
-            Select multiple images to train the AI model
+            Select multiple images to prepare for video processing
           </p>
         </div>
 
@@ -256,7 +260,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
                     />
                   </svg>
                   <p className="text-sm text-green-400">
-                    Images uploaded successfully! Starting camera...
+                    Images uploaded successfully! Starting video echo...
                   </p>
                 </div>
               </div>
@@ -278,7 +282,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
                   <span>Uploading...</span>
                 </div>
               ) : (
-                "Submit Images"
+                "Upload Images & Continue"
               )}
             </button>
           </form>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Video Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      video {
+        border: 2px solid #333;
+        margin: 10px;
+      }
+      .container {
+        display: flex;
+      }
+      .log {
+        background: #f0f0f0;
+        padding: 10px;
+        margin: 10px 0;
+        height: 200px;
+        overflow-y: auto;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Video Processing Debug</h1>
+
+    <div class="container">
+      <div>
+        <h3>Local Video (Original)</h3>
+        <video id="localVideo" autoplay muted width="320" height="240"></video>
+      </div>
+      <div>
+        <h3>Processed Video (Grayscale)</h3>
+        <video id="remoteVideo" autoplay muted width="320" height="240"></video>
+      </div>
+    </div>
+
+    <div>
+      <button id="startBtn">Start Camera</button>
+      <button id="stopBtn" disabled>Stop Camera</button>
+      <button id="testBtn">Test WebSocket</button>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+      const localVideo = document.getElementById("localVideo");
+      const remoteVideo = document.getElementById("remoteVideo");
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const testBtn = document.getElementById("testBtn");
+      const log = document.getElementById("log");
+
+      let stream;
+      let mediaRecorder;
+      let ws;
+
+      function addLog(message) {
+        const time = new Date().toLocaleTimeString();
+        log.innerHTML += `<div>[${time}] ${message}</div>`;
+        log.scrollTop = log.scrollHeight;
+        console.log(message);
+      }
+
+      testBtn.onclick = () => {
+        addLog("Testing WebSocket connection...");
+        ws = new WebSocket("ws://localhost:5000/ws");
+
+        ws.onopen = () => {
+          addLog("✅ WebSocket connected");
+
+          // Send test data
+          const testData = new Uint8Array([1, 2, 3, 4, 5]);
+          ws.send(testData);
+          addLog("📤 Sent test binary data: " + testData.length + " bytes");
+        };
+
+        ws.onmessage = (event) => {
+          addLog("📥 Received: " + event.data.length + " bytes");
+          if (event.data instanceof ArrayBuffer) {
+            addLog("   Binary data received");
+          } else {
+            addLog("   Text data: " + event.data);
+          }
+        };
+
+        ws.onerror = (error) => {
+          addLog("❌ WebSocket error: " + error);
+        };
+
+        ws.onclose = () => {
+          addLog("🔌 WebSocket closed");
+        };
+      };
+
+      startBtn.onclick = async () => {
+        try {
+          addLog("Requesting camera access...");
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, frameRate: 30 },
+            audio: false,
+          });
+
+          localVideo.srcObject = stream;
+          await localVideo.play();
+          addLog(
+            "✅ Camera started, video dimensions: " +
+              localVideo.videoWidth +
+              "x" +
+              localVideo.videoHeight
+          );
+
+          // Wait for video to be ready
+          await new Promise((resolve) => {
+            localVideo.onloadedmetadata = resolve;
+          });
+
+          // Test MediaRecorder
+          const mimeType = "video/webm;codecs=vp8";
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            addLog("❌ MediaRecorder does not support: " + mimeType);
+            return;
+          }
+
+          addLog("✅ MediaRecorder supports: " + mimeType);
+
+          // Create MediaRecorder
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: 1000000,
+          });
+
+          let chunkCount = 0;
+          mediaRecorder.ondataavailable = (event) => {
+            chunkCount++;
+            addLog(
+              `📦 Chunk ${chunkCount}: ${event.data.size} bytes, type: ${event.data.type}`
+            );
+
+            if (event.data.size > 0) {
+              // Convert to ArrayBuffer and send
+              event.data.arrayBuffer().then((arrayBuffer) => {
+                addLog(`📤 Sending ${arrayBuffer.byteLength} bytes to server`);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send(arrayBuffer);
+                } else {
+                  addLog("❌ WebSocket not ready");
+                }
+              });
+            } else {
+              addLog("❌ Empty chunk received!");
+            }
+          };
+
+          mediaRecorder.onstart = () => addLog("🎬 MediaRecorder started");
+          mediaRecorder.onstop = () => addLog("⏹️ MediaRecorder stopped");
+          mediaRecorder.onerror = (error) =>
+            addLog("❌ MediaRecorder error: " + error);
+
+          // Start recording
+          mediaRecorder.start(500); // 500ms chunks
+          addLog("🎬 Started recording with 500ms chunks");
+
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } catch (error) {
+          addLog("❌ Error: " + error.message);
+        }
+      };
+
+      stopBtn.onclick = () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        if (ws) {
+          ws.close();
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        addLog("🛑 Stopped everything");
+      };
+    </script>
+  </body>
+</html>
