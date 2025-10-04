@@ -26,7 +26,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             Bak Cameras
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 font-light">
-            Real-time video streaming with AI processing
+            Real-time video streaming with black & white processing
           </p>
         </div>
 
@@ -73,10 +73,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">
-              Live Video Echo
+              Live Black & White
             </h3>
             <p className="text-gray-400 text-sm">
-              Real-time video streaming with WebSocket echo
+              Real-time video streaming with black & white conversion
             </p>
           </div>
 
@@ -100,7 +100,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               Instant Results
             </h3>
             <p className="text-gray-400 text-sm">
-              Get immediate video processing and streaming
+              Get immediate black & white video processing
             </p>
           </div>
         </div>
@@ -131,7 +131,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
         {/* Footer text */}
         <p className="mt-8 text-gray-500 text-sm">
-          Experience the future of real-time video processing
+          Experience real-time black & white video processing
         </p>
       </div>
     </div>

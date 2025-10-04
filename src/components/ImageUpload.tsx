@@ -260,7 +260,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onUploadSuccess }) => {
                     />
                   </svg>
                   <p className="text-sm text-green-400">
-                    Images uploaded successfully! Starting video echo...
+                    Images uploaded successfully! Starting black & white
+                    processing...
                   </p>
                 </div>
               </div>

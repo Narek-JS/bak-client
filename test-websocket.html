@@ -48,7 +48,10 @@
       }
 
       connectBtn.onclick = () => {
-        const url = "ws://localhost:5000/ws";
+        const url =
+          window.location.protocol === "https:"
+            ? "wss://bak-camera.fly.dev/ws"
+            : "ws://localhost:5000/ws";
         addLog(`Connecting to: ${url}`);
 
         ws = new WebSocket(url);

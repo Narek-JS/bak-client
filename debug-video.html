@@ -71,7 +71,11 @@
 
       testBtn.onclick = () => {
         addLog("Testing WebSocket connection...");
-        ws = new WebSocket("ws://localhost:5000/ws");
+        const url =
+          window.location.protocol === "https:"
+            ? "wss://bak-camera.fly.dev/ws"
+            : "ws://localhost:5000/ws";
+        ws = new WebSocket(url);
 
         ws.onopen = () => {
           addLog("✅ WebSocket connected");

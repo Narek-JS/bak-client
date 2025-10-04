@@ -6,7 +6,7 @@ A modern React web application for real-time AI-powered camera processing with o
 
 - **Landing Page**: Beautiful dark-themed welcome screen with gradient effects
 - **Image Upload**: Multi-file upload interface with drag-and-drop support
-- **Live Camera Processing**: Real-time video streaming with AI object detection overlay
+- **Live Camera Processing**: Real-time video streaming with black & white processing
 - **WebSocket Integration**: Real-time communication with backend processing server
 - **Responsive Design**: Modern UI built with Tailwind CSS
 
@@ -41,8 +41,8 @@ A modern React web application for real-time AI-powered camera processing with o
 ## Application Flow
 
 1. **Landing Page**: Users see the welcome screen and click "Start Magic"
-2. **Image Upload**: Users upload multiple images for AI model training
-3. **Live Processing**: Camera activates and streams real-time video with AI detection overlays
+2. **Image Upload**: Users upload multiple images for processing
+3. **Live Processing**: Camera activates and streams real-time video with black & white processing
 
 ## Components
 
@@ -79,21 +79,8 @@ The application expects a backend server with the following endpoints:
 
 - **URL**: `ws://localhost:8000/ws`
 - **Input**: Video chunks (Blob data)
-- **Output**: JSON detection results (supports both binary and text messages)
-- **Format**:
-  ```json
-  {
-    "type": "detection",
-    "data": [
-      {
-        "id": 1,
-        "label": "person",
-        "box": [x, y, width, height],
-        "confidence": 0.95
-      }
-    ]
-  }
-  ```
+- **Output**: Processed black & white video chunks (binary data)
+- **Format**: WebM video chunks with grayscale processing
 
 ## Troubleshooting
 

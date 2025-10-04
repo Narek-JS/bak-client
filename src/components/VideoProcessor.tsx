@@ -19,7 +19,10 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
 
   const WEBSOCKET_URL =
-    import.meta.env.VITE_WEBSOCKET_URL || "ws://localhost:5000/ws";
+    import.meta.env.VITE_WEBSOCKET_URL ||
+    (window.location.protocol === "https:"
+      ? "wss://bak-camera.fly.dev/ws"
+      : "ws://localhost:5000/ws");
 
   const initializeMediaSource = useCallback(() => {
     if (!remoteVideoRef.current) return;
@@ -433,7 +436,7 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
             Real-time Video Processing
           </h1>
           <p className="text-gray-400 text-lg">
-            Live camera feed with grayscale processing
+            Live camera feed with black & white processing
           </p>
         </div>
 
@@ -525,7 +528,7 @@ const VideoProcessor: React.FC<VideoProcessorProps> = ({ onStop }) => {
           {/* Remote Video (Grayscale) */}
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
             <h3 className="text-lg font-semibold text-white mb-4 text-center">
-              Processed Feed (Grayscale)
+              Processed Feed (Black & White)
             </h3>
             <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
               <video
